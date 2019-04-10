@@ -1,4 +1,4 @@
-# Double-Pendulum trajectory visualisation
+# Double-Pendulum chaos visualisation
 # Python Code:
 
 from numpy import sin, cos
