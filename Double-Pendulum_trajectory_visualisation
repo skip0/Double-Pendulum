@@ -1,0 +1,126 @@
+# Double-Pendulum trajectory visualisation
+# Python Code:
+
+from numpy import sin, cos
+import numpy as np
+import matplotlib.pyplot as plt
+import scipy.integrate as integrate
+import math
+from numba import jit
+
+"""Code by skip0, inspired by the animation example code 
+double_pendulum_animated.py on the matplotlib website at 
+https://matplotlib.org/examples/animation/double_pendulum_animated.html"""
+
+M1 = 1.0
+M2 = 1.0
+L1 = 1.0
+L2 = 1.0
+G = 9.81
+w1 = 0.0
+w2 = 0.0
+
+dw = 1
+dt = 0.05
+total_time = 4
+
+W = []
+AllEndPoints = []
+
+t = np.arange(0.0, total_time, dt)
+
+
+@jit
+def position(state, t):
+    posi = np.zeros_like(state)
+    posi[0] = state[1]
+
+    del_ = state[2] - state[0]
+    den1 = (M1 + M2) * L1 - M2 * L1 * cos(del_) * cos(del_)
+    posi[1] = (M2 * L1 * state[1] * state[1] * sin(del_) * cos(del_) +
+               M2 * G * sin(state[2]) * cos(del_) +
+               M2 * L2 * state[3] * state[3] * sin(del_) -
+               (M1 + M2) * G * sin(state[0])) / den1
+
+    posi[2] = state[3]
+
+    den2 = (L2 / L1) * den1
+    posi[3] = (-M2 * L2 * state[3] * state[3] * sin(del_) * cos(del_) +
+               (M1 + M2) * G * sin(state[0]) * cos(del_) -
+               (M1 + M2) * L1 * state[1] * state[1] * sin(del_) -
+               (M1 + M2) * G * sin(state[2])) / den2
+
+    return posi
+
+
+@jit
+def angle_array():
+    for n in range(int(360/dw)):
+        W.append(n*dw)
+
+
+@jit
+def end_points():
+    for n in range(len(W)):
+        for m in range(len(W)):
+            th1 = W[m]
+            th2 = W[n]
+            state = np.radians([th1, w1, th2, w2])
+            P = integrate.odeint(position, state, t)[-1]
+            AllEndPoints.append(P)
+
+
+angle_array()
+end_points()
+
+AllEndPoints = np.array(AllEndPoints)
+
+th2_array = AllEndPoints[:, 2]
+th1_array = AllEndPoints[:, 0]
+th12_array = []
+image_array = []
+
+v = int(math.sqrt(len(th1_array)))
+w = 1/(2*(L1+L2))
+
+a = 0
+b = 0
+
+for i in range(len(th1_array)):
+    while a == 0:
+        c = th1_array[i]
+        if 0 <= c <= 2*math.pi:
+            a = 1
+        elif c < 0:
+                th1_array[i] = c + 2*math.pi
+        else:
+            th1_array[i] = c - 2*math.pi
+    a = 0
+
+    while b == 0:
+        d = th2_array[i]
+        if 0 <= d <= 2 * math.pi:
+            b = 1
+        elif d < 0:
+            th2_array[i] = d + 2 * math.pi
+        else:
+            th2_array[i] = d - 2 * math.pi
+    b = 0
+
+for i1 in range(v):
+    for i2 in range(v):
+        th1 = th1_array[i1*v + i2]
+        th2 = th2_array[i1*v + i2]
+        x2 = sin(th1)*L1 + sin(th2)*L2
+        y2 = cos(th1)*L1 + cos(th2)*L2
+        th12_array.append([0, (x2+(L1+L2))*w, (y2+(L1+L2))*w])
+
+for i1 in range(v):
+    image_array.append(th12_array[int(i1*math.sqrt(len(th12_array))):int((i1+1)*math.sqrt(len(th12_array)))])
+
+pixel_array = np.array(image_array)
+plt.imshow(pixel_array)
+plt.gca().invert_yaxis()
+plt.xlabel("th1 in [" + str(dw) + "°]")
+plt.ylabel("th2 in [" + str(dw) + "°]")
+plt.show()
