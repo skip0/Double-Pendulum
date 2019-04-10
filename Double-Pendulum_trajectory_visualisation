@@ -1,0 +1,67 @@
+# Double-Pendulum_trajectory_visualisation
+# Python Code:
+
+from numpy import sin, cos
+import numpy as np
+import matplotlib.pyplot as plt
+import scipy.integrate as integrate
+
+"""Code by skip0, inspired by the animation example code 
+double_pendulum_animated.py on the matplotlib website at 
+https://matplotlib.org/examples/animation/double_pendulum_animated.html"""
+
+M1 = 1.0
+M2 = 1.0
+L1 = 1.0
+L2 = 1.0
+G = 9.81
+
+th1 = 100
+w1 = 0.0
+th2 = 190
+w2 = 0.0
+
+x11 = L1 * sin(th1)
+y11 = -L1 * cos(th1)
+x12 = L1 * sin(th1) + L1 * sin(th2)
+y12 = -L1 * cos(th1) - L2 * cos(th2)
+
+dt = 0.001
+total_time = 20
+
+t = np.arange(0.0, total_time, dt)
+
+state = np.radians([th1, w1, th2, w2])
+
+def position(state, t):
+    posi = np.zeros_like(state)
+    posi[0] = state[1]
+
+    del_ = state[2] - state[0]
+    den1 = (M1 + M2) * L1 - M2 * L1 * cos(del_) * cos(del_)
+    posi[1] = (M2 * L1 * state[1] * state[1] * sin(del_) * cos(del_) +
+               M2 * G * sin(state[2]) * cos(del_) +
+               M2 * L2 * state[3] * state[3] * sin(del_) -
+               (M1 + M2) * G * sin(state[0])) / den1
+
+    posi[2] = state[3]
+
+    den2 = (L2 / L1) * den1
+    posi[3] = (-M2 * L2 * state[3] * state[3] * sin(del_) * cos(del_) +
+               (M1 + M2) * G * sin(state[0]) * cos(del_) -
+               (M1 + M2) * L1 * state[1] * state[1] * sin(del_) -
+               (M1 + M2) * G * sin(state[2])) / den2
+
+    return posi
+
+
+P = integrate.odeint(position, state, t)
+
+x1 = L1*sin(P[:, 0])
+y1 = -L1*cos(P[:, 0])
+
+x2 = L2*sin(P[:, 2]) + x1
+y2 = -L2*cos(P[:, 2]) + y1
+
+plt.plot(x1, y1, x2, y2)
+plt.show()
